@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CrowdFlow PRO v4</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/static/css/main.css"/>
+</head>
+<body>
+
+<!-- WEAPON NOTIFICATION (civilians only) -->
+<div id="weaponNotif" class="notif-popup hidden">
+  <div class="notif-card">
+    <div class="notif-title"><span class="notif-icon">⚠</span>SECURITY ALERT — CIVILIAN NOTICE</div>
+    <div class="notif-body" id="wnBody">Threat detected. Please move calmly to the nearest exit.</div>
+    <div class="notif-footer" id="wnFooter">Zone: — · Security responding</div>
+    <div class="notif-note">ℹ Police, Army &amp; Security are NOT receiving this civilian alert — they are responding via secure channel.</div>
+    <div class="notif-btns">
+      <button class="btn btn-r" onclick="dismissNotif()">Dismiss</button>
+      <button class="btn btn-a" onclick="goTab('paneEvac')">Evacuation Routes →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<header id="topbar">
+  <div class="tb-brand">
+    <svg class="tb-logo" viewBox="0 0 36 36" fill="none">
+      <circle cx="18" cy="18" r="15" stroke="#00e0ff" stroke-width="0.8" stroke-dasharray="3 2"/>
+      <circle cx="18" cy="18" r="9"  stroke="#00e0ff" stroke-width="0.8"/>
+      <circle cx="18" cy="18" r="3"  fill="#00e0ff"/>
+      <line x1="18" y1="3"  x2="18" y2="9"  stroke="#00e0ff" stroke-width="1.2"/>
+      <line x1="18" y1="27" x2="18" y2="33" stroke="#00e0ff" stroke-width="1.2"/>
+      <line x1="3"  y1="18" x2="9"  y2="18" stroke="#00e0ff" stroke-width="1.2"/>
+      <line x1="27" y1="18" x2="33" y2="18" stroke="#00e0ff" stroke-width="1.2"/>
+    </svg>
+    <div>
+      <div class="brand-name">CROWD<span>FLOW</span> <span class="brand-ver">PRO v4</span></div>
+      <div class="brand-sub">Smart City Surveillance Platform</div>
+    </div>
+  </div>
+  <div class="tb-stats">
+    <div class="tb-m"><div class="tsv" id="mDetected">—</div><div class="tsl">Detected</div></div>
+    <div class="tb-m"><div class="tsv" id="mDensity">—</div><div class="tsl">Density</div></div>
+    <div class="tb-m"><div class="tsv" id="mEntries" style="color:var(--green)">0</div><div class="tsl">Entries</div></div>
+    <div class="tb-m"><div class="tsv" id="mExits" style="color:var(--red)">0</div><div class="tsl">Exits</div></div>
+    <div class="tb-m"><div class="tsv" id="mQueues">0</div><div class="tsl">Queues</div></div>
+    <div class="tb-m"><div class="tsv" id="mThreats" style="color:var(--red)">0</div><div class="tsl">Threats</div></div>
+    <div class="tb-m"><div class="tsv" id="mRisk">—</div><div class="tsl">Risk</div></div>
+    <div class="tb-m"><div class="tsv" id="mFlow">—</div><div class="tsl">Flow Dir</div></div>
+    <div class="tb-m"><div class="tsv" id="mProfile" style="color:var(--purple)">—</div><div class="tsl">Profile</div></div>
+  </div>
+  <div class="tb-right">
+    <div class="pill pill-live" id="livePill"><span class="dot"></span><span id="liveLabel">IDLE</span></div>
+    <div class="pill pill-ai">AI ACTIVE</div>
+    <div class="tb-clock" id="tbClock">--:--:--</div>
+  </div>
+</header>
+
+<!-- NAV TABS -->
+<nav id="navtabs">
+  <div class="ntab active" onclick="goTab('paneFeed')">📹 Live Feed</div>
+  <div class="ntab" onclick="goTab('paneThreat')">🚨 Threat <span class="nbadge" id="nbThreat">0</span></div>
+  <div class="ntab" onclick="goTab('paneAnalytics')">📊 Analytics</div>
+  <div class="ntab" onclick="goTab('paneMultiCam')">🎥 Multi-Cam</div>
+  <div class="ntab" onclick="goTab('paneEvac')">🚪 Evacuation</div>
+  <div class="ntab" onclick="goTab('paneSpeed')">⚡ Speed Map</div>
+  <div class="ntab" onclick="goTab('paneReport')">📄 Report</div>
+</nav>
+
+<!-- WORKSPACE -->
+<div id="workspace">
+
+<!-- ══ LIVE FEED ══ -->
+<div class="pane active" id="paneFeed">
+  <!-- LEFT -->
+  <aside class="lf-left">
+    <!-- Source Switcher -->
+    <div class="sb-blk">
+      <div class="sec">Video Source</div>
+      <div class="src-panel">
+        <button class="src-btn active" id="srcBtnFile"   onclick="setSrcMode('file')">
+          <span>🎬</span><span class="src-info"><b>Video File</b><small>Upload MP4/AVI/MOV</small></span>
+        </button>
+        <button class="src-btn" id="srcBtnMobile" onclick="setSrcMode('mobile')">
+          <span>📱</span><span class="src-info"><b>Mobile Phone</b><small>IP Webcam app</small></span>
+        </button>
+        <button class="src-btn" id="srcBtnRTSP"   onclick="setSrcMode('rtsp')">
+          <span>📷</span><span class="src-info"><b>CCTV / IP Cam</b><small>RTSP stream</small></span>
+        </button>
+        <button class="src-btn" id="srcBtnUSB"    onclick="setSrcMode('usb')">
+          <span>🔌</span><span class="src-info"><b>USB Webcam</b><small>Device index</small></span>
+        </button>
+        <!-- File upload area -->
+        <div id="fileArea" class="src-sub">
+          <button class="btn btn-c w100" onclick="document.getElementById('fileIn').click()">📂 Browse Video File</button>
+          <input id="fileIn" type="file" accept="video/*" style="display:none" onchange="uploadFile(event)"/>
+          <div class="prog-wrap" id="progWrap" style="display:none">
+            <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+            <div class="prog-lbl" id="progLbl">Uploading…</div>
+          </div>
+        </div>
+        <!-- Stream URL area -->
+        <div id="urlArea" class="src-sub" style="display:none">
+          <div class="src-lbl" id="urlHint">Stream URL</div>
+          <input type="text" class="inp" id="urlInp" placeholder="rtsp://... or http://... or 0"/>
+          <button class="btn btn-c w100 mt5" onclick="applyStream()">Connect Stream</button>
+        </div>
+        <div class="src-status" id="srcStatus">● Idle — no source loaded</div>
+      </div>
+    </div>
+    <!-- Zone monitor -->
+    <div class="sb-blk grow">
+      <div class="sec">Zone Monitor</div>
+      <div id="zoneList"></div>
+    </div>
+    <!-- Overlays -->
+    <div class="sb-blk">
+      <div class="sec">Overlays</div>
+      <label><input type="checkbox" id="togHeat"   checked onchange="sendOverlay()"> Heatmap</label>
+      <label><input type="checkbox" id="togBoxes"  checked onchange="sendOverlay()"> Detection Boxes</label>
+      <label><input type="checkbox" id="togTrails" checked onchange="sendOverlay()"> Movement Trails</label>
+      <label><input type="checkbox" id="togFlow"   checked onchange="sendOverlay()"> Flow Vectors</label>
+      <label><input type="checkbox" id="togZones"  checked onchange="sendOverlay()"> Zone Bounds</label>
+      <div class="sec mt8">Sensitivity</div>
+      <input type="range" id="sensSlider" min="5" max="80" value="30" class="slider" oninput="sendSensitivity(+this.value)"/>
+      <div class="slider-lbl"><span>Low</span><span>High</span></div>
+    </div>
+    <!-- Staff controls -->
+    <div class="sb-blk">
+      <div class="sec">Staff Controls</div>
+      <div class="ctrl-grid">
+        <button class="btn btn-r"  onclick="staffDo('close')">🚫 Close Zone</button>
+        <button class="btn btn-a"  onclick="staffDo('redirect')">↪ Redirect</button>
+        <button class="btn btn-g"  onclick="staffDo('open')">✓ Open Zone</button>
+        <button class="btn btn-c"  onclick="takeSnap()">📸 Snapshot</button>
+        <button class="btn btn-p  full" onclick="weaponTest()">⚠ Simulate Weapon Alert</button>
+        <button class="btn btn-r  full" onclick="triggerEvac()">🚨 Trigger Evacuation</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CENTER: Video feed -->
+  <main class="lf-center">
+    <div class="feed-bar">
+      <span class="feed-id" id="feedLabel">CROWDFLOW PRO v4 · LIVE ANALYSIS</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-a" onclick="manualAlert()">⚠ Manual Alert</button>
+        <button class="btn btn-r" onclick="weaponTest()">⚠ Weapon Test</button>
+      </div>
+    </div>
+    <div class="vstack" id="vstk">
+      <!-- MJPEG stream from Flask/OpenCV — always connected -->
+      <img id="liveFeed" src="/api/video_feed" alt="feed"/>
+      <!-- seek bar only visible when file loaded -->
+      <div class="seek-overlay hidden" id="seekOverlay">
+        <input type="range" id="seekBar" class="seek" min="0" max="100" value="0" oninput="doSeek(+this.value)"/>
+        <span class="vtxt" id="vcTime">0:00 / 0:00</span>
+      </div>
+      <!-- HUD -->
+      <div class="hud tl" id="hudTL">CAM-01 · AI ANALYSIS</div>
+      <div class="hud tr" id="hudTR">● 00:00:00</div>
+      <div class="hud bl">CrowdFlow PRO v4 · OpenCV ML</div>
+      <div class="hud br" id="hudBR">DENSITY: — · RISK: —</div>
+      <!-- stream status badge -->
+      <div class="stream-badge" id="streamBadge">● IDLE</div>
+    </div>
+  </main>
+
+  <!-- RIGHT panel -->
+  <aside class="lf-right">
+    <div class="rp-blk">
+      <div class="sec">Entry–Exit Counter</div>
+      <div class="stat-grid2">
+        <div class="card"><div class="card-val green" id="rcEntry">0</div><div class="card-lbl">Entries</div></div>
+        <div class="card"><div class="card-val red"   id="rcExit">0</div><div class="card-lbl">Exits</div></div>
+        <div class="card"><div class="card-val cyan"  id="rcNet">0</div><div class="card-lbl">Net Inside</div></div>
+        <div class="card"><div class="card-val amber" id="rcRate">0</div><div class="card-lbl">Per Min</div></div>
+      </div>
+    </div>
+    <div class="rp-blk">
+      <div class="sec">Queue Detection</div>
+      <div id="queueList"></div>
+    </div>
+    <div class="rp-blk">
+      <div class="sec">ML Prediction (next 4 min)</div>
+      <div style="height:68px"><canvas id="predChart"></canvas></div>
+      <div id="predInfo" style="font-size:10px;color:var(--text2);margin-top:4px">Waiting for data…</div>
+    </div>
+    <div class="rp-blk" style="padding-bottom:4px">
+      <div class="sec">Live Alerts</div>
+    </div>
+    <div class="rp-blk grow" id="alertFeed"></div>
+  </aside>
+</div>
+
+<!-- ══ THREAT DETECTION ══ -->
+<div class="pane" id="paneThreat">
+  <div class="ph red">
+    <span>🚨 THREAT DETECTION — WEAPON &amp; BEHAVIOR ANALYSIS</span>
+    <div class="ph-acts">
+      <button class="btn btn-r" onclick="weaponTest()">⚠ Simulate Weapon</button>
+      <button class="btn btn-c" onclick="clearThreats()">Clear All</button>
+    </div>
+  </div>
+  <div class="threat-layout">
+    <!-- same annotated feed mirrored -->
+    <div class="threat-feed">
+      <img src="/api/video_feed" style="width:100%;height:100%;object-fit:cover" alt="threat feed"/>
+      <canvas id="threatCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+      <div class="hud tl">CAM-02 · THREAT ANALYSIS</div>
+      <div class="threat-banner hidden" id="threatBanner">⚠ WEAPON DETECTED — CIVILIAN NOTIFICATION SENT · AUTHORITIES ALERTED VIA SECURE CHANNEL</div>
+    </div>
+    <div class="threat-side">
+      <div class="ts-blk"><div class="sec">Active Threats</div><div id="activeThreatList"><div class="empty-msg">No active threats.</div></div></div>
+      <div class="ts-blk"><div class="sec">Person Classification</div><div id="personList"></div></div>
+      <div class="ts-blk"><div class="sec">Behavior Analysis</div><div id="behaviorList"><div class="empty-msg">✅ Normal crowd behavior</div></div></div>
+      <div class="ts-blk grow"><div class="sec">Civilian Notification Log</div><div id="civilianLog" style="font-size:10px;color:var(--text2);line-height:2"></div></div>
+      <div class="ts-blk">
+        <div class="sec">Classification Key</div>
+        <div class="key-grid">
+          <span class="badge b-blue">AUTHORITY</span><span style="font-size:10px">Police · Army · Security</span>
+          <span class="badge b-r">THREAT</span><span style="font-size:10px">Weapon on civilian</span>
+          <span class="badge b-a">SUSPICIOUS</span><span style="font-size:10px">Abnormal behavior</span>
+          <span class="badge b-g">CIVILIAN</span><span style="font-size:10px">No threat detected</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ANALYTICS ══ -->
+<div class="pane" id="paneAnalytics">
+  <div class="ph">📊 ADVANCED ANALYTICS — CROWD BEHAVIOR &amp; ML PREDICTION</div>
+  <div class="anl-grid">
+    <div class="anl-cell"><div class="sec">Crowd Count Trend</div><canvas id="anlCount"></canvas></div>
+    <div class="anl-cell"><div class="sec">Zone Density Comparison</div><canvas id="anlDensity"></canvas></div>
+    <div class="anl-cell"><div class="sec">Entry vs Exit Flow</div><canvas id="anlFlow"></canvas></div>
+    <div class="anl-cell"><div class="sec">ML 15-min Prediction</div><canvas id="anlPredict"></canvas></div>
+    <div class="anl-cell"><div class="sec">Behavior Classification</div><canvas id="anlBehavior"></canvas></div>
+    <div class="anl-cell"><div class="sec">Zone Density History</div><canvas id="anlZones"></canvas></div>
+  </div>
+</div>
+
+<!-- ══ MULTI-CAM ══ -->
+<div class="pane" id="paneMultiCam">
+  <div class="ph">
+    🎥 MULTI-CAMERA — 6 CHANNEL VIEW
+    <div class="ph-acts">
+      <button class="btn btn-a" onclick="alertAllCams()">⚠ Alert All</button>
+      <button class="btn btn-c" onclick="syncCams()">↺ Sync</button>
+    </div>
+  </div>
+  <div class="cam-grid" id="camGrid"></div>
+</div>
+
+<!-- ══ EVACUATION ══ -->
+<div class="pane" id="paneEvac">
+  <div class="ph amber">
+    🚪 EMERGENCY EVACUATION MONITORING
+    <div class="ph-acts">
+      <button class="btn btn-r" onclick="triggerEvac()">🚨 Trigger Evacuation</button>
+      <button class="btn btn-g" onclick="clearEvac()">✓ All Clear</button>
+    </div>
+  </div>
+  <div class="evac-layout">
+    <div class="evac-map"><canvas id="evacCanvas"></canvas></div>
+    <div class="evac-side">
+      <div><div class="sec">Evacuation Routes</div><div id="evacRouteList"></div></div>
+      <div class="divider"></div>
+      <div>
+        <div class="sec">Status</div>
+        <div class="card mb6"><div class="card-val amber" id="evacTime">—</div><div class="card-lbl">Minutes to Clear</div></div>
+        <div class="card"><div class="card-val green" id="evacPct">0%</div><div class="card-lbl">Evacuated</div></div>
+      </div>
+      <div class="divider"></div>
+      <div><div class="sec">Bottlenecks</div><div id="evacBottleneck" style="font-size:11px;color:var(--text2);line-height:2">✅ No bottlenecks</div></div>
+      <div class="divider"></div>
+      <div><div class="sec">Incident Log</div><div id="evacLog" style="font-size:10px;color:var(--text2);line-height:1.9;max-height:80px;overflow-y:auto"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SPEED MAP ══ -->
+<div class="pane" id="paneSpeed">
+  <div class="ph">⚡ CROWD SPEED MAP — FLOW VELOCITY ANALYSIS</div>
+  <div class="speed-layout">
+    <canvas id="speedCanvas"></canvas>
+    <div class="speed-side">
+      <div class="sec">Statistics</div>
+      <div class="card mb6"><div class="card-val cyan"  id="spAvg">—</div><div class="card-lbl">Avg Speed (px/f)</div></div>
+      <div class="card mb6"><div class="card-val red"   id="spMax">—</div><div class="card-lbl">Peak Speed</div></div>
+      <div class="card">    <div class="card-val amber" id="spRisk">LOW</div><div class="card-lbl">Stampede Risk</div></div>
+      <div class="divider"></div>
+      <div class="sec">Zone Speeds</div>
+      <div id="zoneSpeedList"></div>
+      <div class="divider"></div>
+      <div class="sec">Legend</div>
+      <div class="speed-legend">
+        <div><span style="background:#3050dc"></span> Stationary (0–5 px/f)</div>
+        <div><span style="background:#00e87a"></span> Walking (5–15 px/f)</div>
+        <div><span style="background:#ffcc00"></span> Rushing (15–25 px/f)</div>
+        <div><span style="background:#ff2040"></span> Danger (&gt;25 px/f)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REPORT ══ -->
+<div class="pane" id="paneReport">
+  <div class="ph">
+    📄 AUTOMATIC REPORT GENERATION
+    <div class="ph-acts">
+      <button class="btn btn-c" onclick="buildReport()">↺ Refresh</button>
+      <button class="btn btn-g" onclick="window.open('/api/report/download','_blank')">⬇ Export HTML</button>
+    </div>
+  </div>
+  <div class="report-layout">
+    <div class="report-main" id="reportMain">Loading report…</div>
+    <div class="report-side">
+      <div class="sec">Quick Stats</div>
+      <div id="reportStats"></div>
+      <div class="divider"></div>
+      <div class="sec">Incident Log</div>
+      <div id="reportInc" style="font-size:10px;color:var(--text2);line-height:1.9"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /workspace -->
+<script src="/static/js/app.js"></script>
+</body>
+</html>
